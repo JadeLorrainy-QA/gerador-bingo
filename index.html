@@ -1,0 +1,722 @@
+<!doctype html><html><head><meta charset=utf-8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Gerador de Cartelas de Bingo</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Alfa+Slab+One&family=Barlow:wght@400;500;600;700&family=Barlow+Semi+Condensed:wght@600;700&display=swap">
+<style>
+/* Layout: bancada de trabalho. Controles à esquerda, prévia da cartela (papel branco sobre a mesa) e ação de gerar à direita; empilha em uma coluna no celular. */
+:root {
+  --bg: #ECEFEA;
+  --table: #DCE2DC;
+  --surface: #FBFCFA;
+  --ink: #14191A;
+  --muted: #566160;
+  --line: #CDD4CF;
+  --accent: #C2255C;
+  --accent-ink: #FFFFFF;
+  --accent-soft: #F7E3EA;
+  --ok: #1F7A4D;
+  --err: #B3261E;
+  --guide: #C2255C;
+  --shadow: 0 1px 2px rgba(20,25,26,.14), 0 10px 26px rgba(20,25,26,.16);
+  --display: "Alfa Slab One", "Rockwell", Georgia, serif;
+  --body: "Barlow", system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0F1312;
+    --table: #1D2422;
+    --surface: #171C1B;
+    --ink: #E8EDEA;
+    --muted: #9AA7A3;
+    --line: #2B3432;
+    --accent: #FF7AA5;
+    --accent-ink: #2A0A16;
+    --accent-soft: #3A1824;
+    --ok: #5BD08F;
+    --err: #FF8A80;
+    --shadow: 0 1px 2px rgba(0,0,0,.5), 0 10px 26px rgba(0,0,0,.55);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0F1312;
+  --table: #1D2422;
+  --surface: #171C1B;
+  --ink: #E8EDEA;
+  --muted: #9AA7A3;
+  --line: #2B3432;
+  --accent: #FF7AA5;
+  --accent-ink: #2A0A16;
+  --accent-soft: #3A1824;
+  --ok: #5BD08F;
+  --err: #FF8A80;
+  --shadow: 0 1px 2px rgba(0,0,0,.5), 0 10px 26px rgba(0,0,0,.55);
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font: 400 16px/1.5 var(--body);
+  padding-block: 28px 44px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+.wrap { max-width: 1080px; margin: 0 auto; display: flex; flex-direction: column; gap: 24px; }
+h1 {
+  margin: 0;
+  font: 400 clamp(1.75rem, 4.6vw, 2.6rem)/1.05 var(--display);
+  text-wrap: balance;
+}
+.lede { margin: 10px 0 0; max-width: 58ch; color: var(--muted); }
+
+.layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 430px); gap: 24px; align-items: start; }
+@media (max-width: 840px) { .layout { grid-template-columns: minmax(0, 1fr); } }
+
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; min-width: 0; }
+.sec { padding: 20px; display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+.sec + .sec { border-top: 1px solid var(--line); }
+.lab {
+  display: block;
+  font: 600 .78rem/1 var(--body);
+  text-transform: uppercase;
+  letter-spacing: .09em;
+  color: var(--muted);
+}
+
+/* tipo de cartela */
+.types { display: flex; flex-direction: column; gap: 14px; }
+.type { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.type-card {
+  display: flex; align-items: center; gap: 12px;
+  padding: 12px 14px;
+  border: 1.5px solid var(--line);
+  border-radius: 8px;
+  cursor: pointer;
+  background: var(--surface);
+}
+.type-card.on { border-color: var(--accent); background: var(--accent-soft); }
+.type-card input { accent-color: var(--accent); width: 18px; height: 18px; margin: 0; flex: none; }
+.type-main { display: flex; flex-direction: column; min-width: 0; flex: 1; }
+.type-main strong { font-weight: 700; font-size: 1.06rem; }
+.type-main span { color: var(--muted); font-size: .9rem; }
+.type-size { font: 600 .85rem var(--body); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.info-btn {
+  align-self: flex-start;
+  display: inline-flex; align-items: center; gap: 7px;
+  background: none; border: 0; padding: 6px 2px;
+  color: var(--accent); font: 600 .92rem var(--body); cursor: pointer;
+}
+.info-btn .i {
+  width: 18px; height: 18px; border-radius: 50%;
+  border: 1.6px solid currentColor;
+  display: grid; place-items: center;
+  font: 700 .72rem/1 var(--body);
+}
+.info { border-left: 3px solid var(--accent); padding: 2px 0 2px 12px; font-size: .94rem; }
+.info p { margin: 0 0 .55em; }
+.info p:last-child { margin-bottom: 0; }
+.info .meta { color: var(--muted); font-variant-numeric: tabular-nums; }
+
+/* campos */
+.field { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.field > label, fieldset legend { font-weight: 600; font-size: .95rem; padding: 0; }
+.field.inline { flex-direction: row; align-items: center; flex-wrap: wrap; gap: 10px; }
+.sub { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; font-size: .88rem; color: var(--muted); min-width: 0; }
+small { color: var(--muted); font-size: .86rem; }
+fieldset { border: 0; margin: 0; padding: 0; min-width: 0; display: flex; flex-direction: column; gap: 14px; }
+fieldset legend { margin-bottom: 10px; }
+fieldset:disabled { opacity: .45; }
+input[type=number], input[type=text] {
+  font: inherit; color: var(--ink);
+  background: var(--bg);
+  border: 1.5px solid var(--line);
+  border-radius: 8px;
+  padding: 9px 12px; min-height: 44px; width: 100%;
+}
+input[type=number] { width: 130px; font-variant-numeric: tabular-nums; }
+input[type=file] { font: inherit; font-size: .9rem; color: var(--muted); width: 100%; max-width: 100%; }
+input[type=file]::file-selector-button {
+  font: 600 .9rem var(--body); color: var(--ink);
+  background: var(--bg); border: 1.5px solid var(--line); border-radius: 8px;
+  padding: 9px 14px; margin-right: 12px; cursor: pointer;
+}
+input[type=range] { width: 100%; accent-color: var(--accent); }
+input[type=color] { width: 48px; height: 36px; padding: 2px; border: 1.5px solid var(--line); border-radius: 8px; background: var(--bg); cursor: pointer; }
+.row { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+.hint { color: var(--muted); font-size: .9rem; }
+output { font-variant-numeric: tabular-nums; color: var(--muted); font-weight: 500; margin-left: 6px; }
+
+button { font-family: var(--body); }
+.link { background: none; border: 0; padding: 4px 2px; color: var(--accent); font: 600 .88rem var(--body); cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  min-height: 48px; padding: 0 20px;
+  border-radius: 8px; border: 1.5px solid transparent;
+  font: 700 1rem var(--body); cursor: pointer;
+}
+.btn.primary { background: var(--accent); color: var(--accent-ink); width: 100%; }
+.btn.ghost { background: transparent; color: var(--ink); border-color: var(--line); min-height: 40px; font-weight: 600; font-size: .92rem; padding: 0 14px; }
+.btn[disabled] { opacity: .55; cursor: default; }
+:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+
+/* prévia */
+.stage { display: flex; flex-direction: column; gap: 14px; min-width: 0; position: sticky; top: 16px; }
+@media (max-width: 840px) { .stage { position: static; } }
+.stage-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.stage-head h2 { margin: 0; font: 600 .78rem/1 var(--body); text-transform: uppercase; letter-spacing: .09em; color: var(--muted); }
+.dims { font-size: .86rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+.table { background: var(--table); border-radius: 10px; padding: 22px; display: grid; place-items: center; }
+.paper { position: relative; background: #fff; box-shadow: var(--shadow); width: 100%; max-width: 380px; line-height: 0; }
+.paper canvas { display: block; width: 100%; height: auto; }
+.guide {
+  position: absolute; left: 0; right: 0; top: 0;
+  height: calc(var(--top, 0.2) * 100%);
+  border-bottom: 1.5px dashed var(--guide);
+  background: repeating-linear-gradient(135deg, rgba(194,37,92,.08) 0 6px, transparent 6px 12px);
+  display: flex; align-items: flex-end; justify-content: center;
+  pointer-events: none; line-height: 1;
+}
+.guide span { font: 600 .7rem var(--body); letter-spacing: .08em; text-transform: uppercase; color: var(--guide); padding-bottom: 6px; }
+.stage-tools { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.check { display: inline-flex; align-items: center; gap: 8px; font-size: .9rem; cursor: pointer; }
+.check input { accent-color: var(--accent); width: 18px; height: 18px; margin: 0; }
+
+.export { display: flex; flex-direction: column; gap: 10px; }
+.bar { height: 8px; border-radius: 4px; background: var(--line); overflow: hidden; }
+.bar i { display: block; height: 100%; width: 0; background: var(--accent); }
+.status { min-height: 1.5em; font-size: .93rem; color: var(--muted); }
+.status.ok { color: var(--ok); }
+.status.err { color: var(--err); }
+.export-row { display: flex; gap: 10px; flex-wrap: wrap; }
+@media (prefers-reduced-motion: no-preference) { .bar i { transition: width .15s linear; } }
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>Gerador de Cartelas de Bingo</h1>
+    <p class="lede">Escolha o tipo, personalize o visual e baixe um lote de cartelas únicas em PNG, reunidas num arquivo ZIP.</p>
+  </header>
+
+  <main class="layout">
+    <div class="panel">
+      <section class="sec">
+        <span class="lab" id="typeLab">Tipo de cartela</span>
+        <div class="types" role="radiogroup" aria-labelledby="typeLab">
+          <div class="type">
+            <label class="type-card on" id="card75">
+              <input type="radio" name="tipo" value="75" checked>
+              <span class="type-main"><strong>Bingo de 75 bolas</strong><span>Estilo norte-americano · grade 5×5</span></span>
+              <span class="type-size">8 × 10 cm</span>
+            </label>
+            <button type="button" class="info-btn" aria-expanded="false" aria-controls="info75"><span class="i" aria-hidden="true">i</span>Informação</button>
+            <div class="info" id="info75" hidden>
+              <p>Cartela quadrada com grade de 5×5 (25 espaços). O espaço central é livre (Free). Os números vão de 1 a 75 e cada coluna tem a sua faixa: B de 1 a 15, I de 16 a 30, N de 31 a 45, G de 46 a 60 e O de 61 a 75.</p>
+              <p>O objetivo é formar linhas, colunas, diagonais ou a cartela cheia.</p>
+              <p class="meta">Tamanho gerado: 8 × 10 cm, com 2 cm livres no topo.</p>
+            </div>
+          </div>
+          <div class="type">
+            <label class="type-card" id="card90">
+              <input type="radio" name="tipo" value="90">
+              <span class="type-main"><strong>Bingo de 90 bolas</strong><span>Estilo europeu/britânico · 3 linhas × 9 colunas</span></span>
+              <span class="type-size">9 × 9,5 cm</span>
+            </label>
+            <button type="button" class="info-btn" aria-expanded="false" aria-controls="info90"><span class="i" aria-hidden="true">i</span>Informação</button>
+            <div class="info" id="info90" hidden>
+              <p>Cartela retangular com 3 linhas e 9 colunas (27 espaços). Só 15 deles recebem números de 1 a 90, sendo 5 por linha. Os outros 12 ficam em branco. Cada coluna usa uma dezena: 1 a 9, 10 a 19, e assim até 80 a 90.</p>
+              <p>As premiações costumam ocorrer por linha única, linha dupla ou cartela cheia.</p>
+              <p class="meta">Tamanho gerado: 9 × 9,5 cm, com 2 cm livres no topo.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="sec">
+        <label class="lab" for="qty">Quantidade de cartelas</label>
+        <div class="row">
+          <input id="qty" type="number" min="1" max="500" step="1" value="10" inputmode="numeric">
+          <span class="hint">De 1 a 500. Nenhuma cartela se repete.</span>
+        </div>
+      </section>
+
+      <section class="sec">
+        <span class="lab">Personalização</span>
+
+        <div class="field">
+          <label for="bgFile">Papel de fundo</label>
+          <input id="bgFile" type="file" accept="image/*">
+          <div class="sub"><span id="bgName">Nenhuma imagem. As cartelas saem com fundo branco, texto e grade em preto.</span><button type="button" class="link" id="bgClear" hidden>Remover</button></div>
+        </div>
+
+        <div class="field">
+          <label for="alpha">Fundo branco atrás das casas<output id="alphaOut" for="alpha">70%</output></label>
+          <input id="alpha" type="range" min="0" max="100" step="5" value="70">
+          <small>Melhora a leitura dos números sobre uma imagem. Sem imagem de fundo, não muda nada.</small>
+        </div>
+
+        <fieldset id="freeSet">
+          <legend>Espaço Free (só no bingo de 75 bolas)</legend>
+          <div class="field">
+            <label for="freeText">Texto do espaço central</label>
+            <input id="freeText" type="text" maxlength="10" value="FREE" placeholder="FREE" autocomplete="off">
+          </div>
+          <div class="field">
+            <label for="freeFile">Imagem no lugar do texto (opcional)</label>
+            <input id="freeFile" type="file" accept="image/*">
+            <div class="sub"><span id="freeName">Nenhuma imagem.</span><button type="button" class="link" id="freeClear" hidden>Remover</button></div>
+          </div>
+        </fieldset>
+
+        <div class="field inline">
+          <label for="ink">Cor do texto e das linhas</label>
+          <input id="ink" type="color" value="#000000">
+          <button type="button" class="link" id="inkReset" hidden>Voltar ao preto</button>
+        </div>
+      </section>
+    </div>
+
+    <aside class="stage" aria-label="Prévia e exportação">
+      <div class="stage-head">
+        <h2>Prévia</h2>
+        <span class="dims" id="dims"></span>
+      </div>
+      <div class="table">
+        <div class="paper" id="paper">
+          <canvas id="preview" aria-label="Prévia da cartela"></canvas>
+          <div class="guide" id="guide"><span id="guideLab">Espaço no topo · 2 cm</span></div>
+        </div>
+      </div>
+      <div class="stage-tools">
+        <button type="button" class="btn ghost" id="reroll">Nova prévia</button>
+        <label class="check"><input type="checkbox" id="guideToggle" checked>Mostrar o espaço do topo</label>
+      </div>
+
+      <div class="export">
+        <button type="button" class="btn primary" id="go">Gerar 10 cartelas e baixar o ZIP</button>
+        <div class="bar" role="progressbar" aria-label="Progresso" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="barBox" hidden><i id="bar"></i></div>
+        <div class="status" id="status" role="status" aria-live="polite"></div>
+        <div class="export-row">
+          <button type="button" class="btn ghost" id="cancel" hidden>Cancelar</button>
+          <button type="button" class="btn ghost" id="again" hidden>Salvar o ZIP de novo</button>
+        </div>
+      </div>
+    </aside>
+  </main>
+</div>
+
+<script>
+/*PURE-START*/
+const DPI = 300;
+const CRC_T = (() => { const t = new Uint32Array(256); for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; } return t; })();
+function crc32(u8) { let c = 0xFFFFFFFF; for (let i = 0; i < u8.length; i++) c = CRC_T[(c ^ u8[i]) & 255] ^ (c >>> 8); return (c ^ 0xFFFFFFFF) >>> 0; }
+
+/* grava a densidade (300 dpi) no PNG para que imprima em 9 x 9,5 cm e 8 x 10 cm */
+function withDpi(u8) {
+  const dv = new DataView(u8.buffer, u8.byteOffset, u8.byteLength);
+  let p = 8;
+  while (p + 8 <= u8.length) {
+    const len = dv.getUint32(p);
+    const type = String.fromCharCode(u8[p + 4], u8[p + 5], u8[p + 6], u8[p + 7]);
+    if (type === 'pHYs') return u8;
+    if (type === 'IDAT') break;
+    p += 12 + len;
+  }
+  const ppm = Math.round(DPI / 0.0254);
+  const chunk = new Uint8Array(21);
+  const cd = new DataView(chunk.buffer);
+  cd.setUint32(0, 9);
+  chunk.set([0x70, 0x48, 0x59, 0x73], 4);
+  cd.setUint32(8, ppm); cd.setUint32(12, ppm); chunk[16] = 1;
+  cd.setUint32(17, crc32(chunk.subarray(4, 17)));
+  const out = new Uint8Array(u8.length + 21);
+  out.set(u8.subarray(0, 33), 0); out.set(chunk, 33); out.set(u8.subarray(33), 54);
+  return out;
+}
+
+function shuffle(a) { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
+function pick(lo, hi, n) { const p = []; for (let v = lo; v <= hi; v++) p.push(v); shuffle(p); return p.slice(0, n); }
+
+/* 75 bolas: B 1-15, I 16-30, N 31-45, G 46-60, O 61-75; centro livre (null) */
+function make75() {
+  const cols = [];
+  for (let c = 0; c < 5; c++) cols.push(pick(c * 15 + 1, c * 15 + 15, c === 2 ? 4 : 5));
+  const key = cols.map(a => a.slice().sort((x, y) => x - y).join(',')).join('|');
+  const grid = [];
+  for (let r = 0; r < 5; r++) {
+    grid.push([]);
+    for (let c = 0; c < 5; c++) {
+      const col = cols[c];
+      grid[r].push(c === 2 ? (r === 2 ? null : col[r < 2 ? r : r - 1]) : col[r]);
+    }
+  }
+  return { key, grid };
+}
+
+/* 90 bolas: 3 linhas x 9 colunas, 5 números por linha, 1 a 3 por coluna, crescentes de cima para baixo */
+function make90() {
+  let masks;
+  for (;;) {
+    masks = [0, 1, 2].map(() => { const s = new Set(); while (s.size < 5) s.add(Math.floor(Math.random() * 9)); return s; });
+    if ([0, 1, 2, 3, 4, 5, 6, 7, 8].every(c => masks.some(m => m.has(c)))) break;
+  }
+  const grid = [[], [], []];
+  for (let c = 0; c < 9; c++) {
+    const rowsIn = [0, 1, 2].filter(r => masks[r].has(c));
+    const lo = c === 0 ? 1 : c * 10, hi = c === 8 ? 90 : c * 10 + 9;
+    const nums = pick(lo, hi, rowsIn.length).sort((a, b) => a - b);
+    for (let r = 0; r < 3; r++) grid[r][c] = null;
+    rowsIn.forEach((r, i) => { grid[r][c] = nums[i]; });
+  }
+  const key = grid.flat().filter(v => v != null).sort((a, b) => a - b).join(',');
+  return { key, grid };
+}
+function makeCard(type) { return type === '75' ? make75() : make90(); }
+
+function generateUnique(type, n) {
+  const seen = new Set(), out = [];
+  let tries = 0;
+  while (out.length < n) {
+    if (++tries > n * 200 + 1000) throw new Error('Não foi possível sortear tantas cartelas diferentes.');
+    const c = makeCard(type);
+    if (seen.has(c.key)) continue;
+    seen.add(c.key); out.push(c);
+  }
+  return out;
+}
+
+/* ZIP sem compressão (PNG já é comprimido) */
+function makeZip() {
+  const enc = new TextEncoder(), parts = [], cen = [];
+  let off = 0;
+  const d = new Date();
+  const dt = (d.getHours() << 11) | (d.getMinutes() << 5) | (d.getSeconds() >> 1);
+  const dd = ((d.getFullYear() - 1980) << 9) | ((d.getMonth() + 1) << 5) | d.getDate();
+  return {
+    add(name, bytes) {
+      const nb = enc.encode(name), crc = crc32(bytes);
+      const h = new Uint8Array(30 + nb.length), v = new DataView(h.buffer);
+      v.setUint32(0, 0x04034b50, true); v.setUint16(4, 20, true); v.setUint16(6, 0x0800, true); v.setUint16(8, 0, true);
+      v.setUint16(10, dt, true); v.setUint16(12, dd, true); v.setUint32(14, crc, true);
+      v.setUint32(18, bytes.length, true); v.setUint32(22, bytes.length, true);
+      v.setUint16(26, nb.length, true); v.setUint16(28, 0, true); h.set(nb, 30);
+      parts.push(h, new Blob([bytes]));
+      cen.push({ nb, crc, size: bytes.length, off });
+      off += h.length + bytes.length;
+    },
+    finish() {
+      let size = 0;
+      const recs = cen.map(f => {
+        const r = new Uint8Array(46 + f.nb.length), v = new DataView(r.buffer);
+        v.setUint32(0, 0x02014b50, true); v.setUint16(4, 20, true); v.setUint16(6, 20, true); v.setUint16(8, 0x0800, true);
+        v.setUint16(10, 0, true); v.setUint16(12, dt, true); v.setUint16(14, dd, true); v.setUint32(16, f.crc, true);
+        v.setUint32(20, f.size, true); v.setUint32(24, f.size, true); v.setUint16(28, f.nb.length, true);
+        v.setUint32(42, f.off, true); r.set(f.nb, 46); size += r.length; return r;
+      });
+      const e = new Uint8Array(22), ev = new DataView(e.buffer);
+      ev.setUint32(0, 0x06054b50, true); ev.setUint16(8, cen.length, true); ev.setUint16(10, cen.length, true);
+      ev.setUint32(12, size, true); ev.setUint32(16, off, true);
+      return new Blob([...parts, ...recs, e], { type: 'application/zip' });
+    }
+  };
+}
+/*PURE-END*/
+
+(function () {
+  'use strict';
+  const $ = id => document.getElementById(id);
+  const MAX = 500;
+  const TOP_CM = 2.0; /* espaço livre no topo, antes da palavra BINGO */
+  /* medidas em cm: hh = faixa do título, ch = altura da casa, foot = linha do rodapé */
+  const SPEC = {
+    '75': { name: '75 bolas', w: 8, h: 10, cols: 5, rows: 5, hh: 1.1, ch: 1.15, foot: 9.4 },
+    '90': { name: '90 bolas', w: 9, h: 9.5, cols: 9, rows: 3, hh: 1.1, ch: 1.75, foot: 9.0 }
+  };
+  const DISP = s => `${s}px "Alfa Slab One", "Arial Black", Impact, sans-serif`;
+  const NUM = s => `700 ${s}px "Barlow Semi Condensed", "Arial Narrow", Arial, sans-serif`;
+  const BODY = s => `600 ${s}px "Barlow", Arial, sans-serif`;
+  const fmt = n => String(n).replace('.', ',');
+
+  const state = { type: '75', bg: null, freeImg: null, alpha: 70, ink: '#000000', sample: null };
+  let busy = false, cancel = false, lastZip = null;
+
+  const fontsP = (async () => {
+    try {
+      await Promise.race([
+        Promise.all([
+          document.fonts.load('40px "Alfa Slab One"'),
+          document.fonts.load('700 40px "Barlow Semi Condensed"'),
+          document.fonts.load('600 40px "Barlow"')
+        ]),
+        new Promise(r => setTimeout(r, 4000))
+      ]);
+    } catch (e) { /* segue com as fontes reserva */ }
+  })();
+
+  const dlP = (window.claude && typeof window.claude.use === 'function')
+    ? window.claude.use('downloads').catch(() => null)
+    : Promise.resolve(null);
+
+  /* ---------- desenho ---------- */
+  function cover(g, img, x, y, w, h) {
+    const iw = img.width, ih = img.height, ir = iw / ih, r = w / h;
+    let sw, sh, sx, sy;
+    if (ir > r) { sh = ih; sw = sh * r; sx = (iw - sw) / 2; sy = 0; } else { sw = iw; sh = sw / r; sx = 0; sy = (ih - sh) / 2; }
+    g.drawImage(img, sx, sy, sw, sh, x, y, w, h);
+  }
+  function contain(g, img, x, y, w, h) {
+    const s = Math.min(w / img.width, h / img.height), dw = img.width * s, dh = img.height * s;
+    g.drawImage(img, x + (w - dw) / 2, y + (h - dh) / 2, dw, dh);
+  }
+  function fit(g, text, cx, cy, size, maxW, font) {
+    g.font = font(size);
+    const w = g.measureText(text).width;
+    if (w > maxW) { size *= maxW / w; g.font = font(size); }
+    const m = g.measureText(text);
+    const asc = m.actualBoundingBoxAscent || size * 0.7, desc = m.actualBoundingBoxDescent || 0;
+    g.textAlign = 'center'; g.textBaseline = 'alphabetic';
+    g.fillText(text, cx, cy + (asc - desc) / 2);
+  }
+  function spaced(g, text, cx, cy, size, gap, font) {
+    g.font = font(size);
+    const chars = [...text], ws = chars.map(c => g.measureText(c).width);
+    const total = ws.reduce((a, b) => a + b, 0) + gap * (chars.length - 1);
+    const m = g.measureText('B'), y = cy + (m.actualBoundingBoxAscent - m.actualBoundingBoxDescent) / 2;
+    let x = cx - total / 2;
+    g.textAlign = 'left'; g.textBaseline = 'alphabetic';
+    chars.forEach((c, i) => { g.fillText(c, x, y); x += ws[i] + gap; });
+    g.textAlign = 'center';
+  }
+  function pill(g, x, y, w, h, r) {
+    g.beginPath();
+    if (g.roundRect) g.roundRect(x, y, w, h, r); else g.rect(x, y, w, h);
+    g.fill();
+  }
+
+  function drawCard(cv, type, card, o, dpi, serial) {
+    const sp = SPEC[type], k = dpi / 2.54, is75 = type === '75';
+    const W = Math.round(sp.w * k), H = Math.round(sp.h * k);
+    cv.width = W; cv.height = H;
+    const g = cv.getContext('2d');
+    g.fillStyle = '#fff'; g.fillRect(0, 0, W, H);
+    if (o.bg) cover(g, o.bg, 0, 0, W, H);
+
+    const mx = 0.5 * k, gw = W - 2 * mx, cw = gw / sp.cols;
+    const hy = TOP_CM * k, hh = sp.hh * k, gy = hy + hh, ch = sp.ch * k;
+    const lw = 0.04 * k, frame = 0.075 * k;
+    const wash = `rgba(255,255,255,${o.alpha})`;
+    g.lineJoin = 'miter'; g.strokeStyle = o.ink; g.lineWidth = lw;
+
+    /* faixa do título (o espaço do topo fica livre, acima dela) */
+    if (is75) {
+      for (let c = 0; c < 5; c++) {
+        const x = mx + c * cw;
+        g.fillStyle = wash; g.fillRect(x, hy, cw, hh);
+        g.strokeRect(x, hy, cw, hh);
+        g.fillStyle = o.ink;
+        fit(g, 'BINGO'[c], x + cw / 2, hy + hh / 2, 0.72 * k, cw * 0.8, DISP);
+      }
+    } else {
+      g.fillStyle = wash; g.fillRect(mx, hy, gw, hh);
+      g.strokeRect(mx, hy, gw, hh);
+      g.fillStyle = o.ink;
+      spaced(g, 'BINGO', W / 2, hy + hh / 2, 0.85 * k, 0.3 * k, DISP);
+    }
+
+    /* casas */
+    for (let r = 0; r < sp.rows; r++) {
+      for (let c = 0; c < sp.cols; c++) {
+        const x = mx + c * cw, y = gy + r * ch, v = card.grid[r][c];
+        g.fillStyle = wash; g.fillRect(x, y, cw, ch);
+        if (!is75 && v == null) { g.fillStyle = o.ink; g.globalAlpha = 0.1; g.fillRect(x, y, cw, ch); g.globalAlpha = 1; }
+        g.lineWidth = lw; g.strokeStyle = o.ink; g.strokeRect(x, y, cw, ch);
+        g.fillStyle = o.ink;
+        if (is75 && r === 2 && c === 2) {
+          if (o.freeImg) contain(g, o.freeImg, x + 0.1 * k, y + 0.1 * k, cw - 0.2 * k, ch - 0.2 * k);
+          else if (o.freeText) fit(g, o.freeText, x + cw / 2, y + ch / 2, 0.5 * k, cw * 0.84, DISP);
+        } else if (v != null) {
+          fit(g, String(v), x + cw / 2, y + ch / 2, 0.6 * k, cw * 0.86, NUM);
+        }
+      }
+    }
+    g.lineWidth = frame; g.strokeStyle = o.ink;
+    g.strokeRect(mx, hy, gw, hh + sp.rows * ch);
+
+    /* rodapé com o número da cartela */
+    const label = `Cartela ${String(serial).padStart(4, '0')} · ${sp.name}`, fy = sp.foot * k;
+    g.font = BODY(0.27 * k);
+    const tw = Math.min(g.measureText(label).width, gw);
+    if (o.bg && o.alpha > 0) { g.fillStyle = wash; pill(g, W / 2 - tw / 2 - 0.25 * k, fy - 0.25 * k, tw + 0.5 * k, 0.5 * k, 0.25 * k); }
+    g.fillStyle = o.ink;
+    fit(g, label, W / 2, fy, 0.27 * k, gw, BODY);
+  }
+
+  /* ---------- imagens enviadas ---------- */
+  async function loadImg(file, maxSide) {
+    let src;
+    try { src = await createImageBitmap(file); }
+    catch (e) {
+      src = await new Promise((res, rej) => {
+        const u = URL.createObjectURL(file), im = new Image();
+        im.onload = () => { URL.revokeObjectURL(u); res(im); };
+        im.onerror = () => { URL.revokeObjectURL(u); rej(new Error('img')); };
+        im.src = u;
+      });
+    }
+    const w = src.width || src.naturalWidth || 1000, h = src.height || src.naturalHeight || 1000;
+    const s = Math.min(1, maxSide / Math.max(w, h));
+    const c = document.createElement('canvas');
+    c.width = Math.max(1, Math.round(w * s)); c.height = Math.max(1, Math.round(h * s));
+    c.getContext('2d').drawImage(src, 0, 0, c.width, c.height);
+    if (src.close) src.close();
+    return c;
+  }
+
+  /* ---------- interface ---------- */
+  const opts = () => ({ bg: state.bg, freeImg: state.freeImg, freeText: $('freeText').value, alpha: state.alpha / 100, ink: state.ink });
+  let timer = 0;
+  function schedule() { clearTimeout(timer); timer = setTimeout(renderPreview, 70); }
+  async function renderPreview() {
+    await fontsP;
+    const t = state.type;
+    if (!state.sample || state.sample.type !== t) state.sample = { type: t, card: makeCard(t) };
+    drawCard($('preview'), t, state.sample.card, opts(), 200, 1);
+  }
+  function updateMeta() {
+    const sp = SPEC[state.type], k = DPI / 2.54;
+    $('dims').textContent = `${fmt(sp.w)} × ${fmt(sp.h)} cm · ${Math.round(sp.w * k)} × ${Math.round(sp.h * k)} px (${DPI} dpi)`;
+    $('paper').style.setProperty('--top', String(TOP_CM / sp.h));
+    $('guideLab').textContent = `Espaço no topo · ${fmt(TOP_CM)} cm`;
+    $('freeSet').disabled = state.type !== '75';
+    $('card75').classList.toggle('on', state.type === '75');
+    $('card90').classList.toggle('on', state.type === '90');
+  }
+  function updateGo() {
+    const n = parseInt($('qty').value, 10);
+    $('go').textContent = Number.isFinite(n) && n > 0
+      ? `Gerar ${n} cartela${n > 1 ? 's' : ''} e baixar o ZIP`
+      : 'Gerar cartelas e baixar o ZIP';
+  }
+  function say(kind, msg) { const s = $('status'); s.className = 'status' + (kind ? ' ' + kind : ''); s.textContent = msg; }
+  function progress(p) {
+    $('bar').style.width = (p * 100).toFixed(1) + '%';
+    $('barBox').setAttribute('aria-valuenow', String(Math.round(p * 100)));
+  }
+
+  document.querySelectorAll('input[name=tipo]').forEach(r => r.addEventListener('change', () => {
+    state.type = r.value; updateMeta(); updateGo(); schedule();
+  }));
+  document.querySelectorAll('.info-btn').forEach(b => b.addEventListener('click', () => {
+    const p = $(b.getAttribute('aria-controls')), open = p.hidden;
+    p.hidden = !open; b.setAttribute('aria-expanded', String(open));
+  }));
+  $('qty').addEventListener('input', updateGo);
+  $('qty').addEventListener('change', () => {
+    let n = parseInt($('qty').value, 10);
+    if (!Number.isFinite(n)) n = 1;
+    $('qty').value = Math.min(MAX, Math.max(1, n)); updateGo();
+  });
+  $('alpha').addEventListener('input', () => { state.alpha = +$('alpha').value; $('alphaOut').textContent = state.alpha + '%'; schedule(); });
+  $('freeText').addEventListener('input', schedule);
+  $('ink').addEventListener('input', () => { state.ink = $('ink').value; $('inkReset').hidden = state.ink.toLowerCase() === '#000000'; schedule(); });
+  $('inkReset').addEventListener('click', () => { $('ink').value = '#000000'; state.ink = '#000000'; $('inkReset').hidden = true; schedule(); });
+  $('reroll').addEventListener('click', () => { state.sample = null; schedule(); });
+  $('guideToggle').addEventListener('change', () => { $('guide').hidden = !$('guideToggle').checked; });
+
+  async function pickImage(inputId, key, nameId, clearId, maxSide, emptyText) {
+    const inp = $(inputId), f = inp.files && inp.files[0];
+    if (!f) return;
+    try {
+      state[key] = await loadImg(f, maxSide);
+      $(nameId).textContent = f.name; $(clearId).hidden = false;
+    } catch (e) {
+      state[key] = null; inp.value = '';
+      $(nameId).textContent = 'Não foi possível ler esse arquivo. Envie uma imagem PNG, JPG ou WebP.';
+      $(clearId).hidden = true;
+    }
+    schedule();
+  }
+  $('bgFile').addEventListener('change', () => pickImage('bgFile', 'bg', 'bgName', 'bgClear', 2600));
+  $('freeFile').addEventListener('change', () => pickImage('freeFile', 'freeImg', 'freeName', 'freeClear', 800));
+  $('bgClear').addEventListener('click', () => {
+    state.bg = null; $('bgFile').value = ''; $('bgClear').hidden = true;
+    $('bgName').textContent = 'Nenhuma imagem. As cartelas saem com fundo branco, texto e grade em preto.'; schedule();
+  });
+  $('freeClear').addEventListener('click', () => {
+    state.freeImg = null; $('freeFile').value = ''; $('freeClear').hidden = true;
+    $('freeName').textContent = 'Nenhuma imagem.'; schedule();
+  });
+
+  /* ---------- exportação ---------- */
+  function setBusy(b) {
+    busy = b;
+    $('go').disabled = b; $('cancel').hidden = !b; $('barBox').hidden = !b;
+    if (b) { progress(0); $('again').hidden = true; } else { $('again').hidden = !lastZip; }
+  }
+  async function save() {
+    const dl = await dlP;
+    if (!dl) {
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(lastZip.blob);
+      a.download = lastZip.name;
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(a.href), 10000);
+      say('ok', `Pronto. ${lastZip.count} cartelas únicas em ${lastZip.name}.`);
+      return;
+    }
+    try {
+      await dl.save({ filename: lastZip.name, data: lastZip.blob });
+      say('ok', `Pronto. ${lastZip.count} cartelas únicas em ${lastZip.name}.`);
+    } catch (e) {
+      if (e && e.code === 'declined') say('', 'Salvamento cancelado. O ZIP continua pronto: use "Salvar o ZIP de novo".');
+      else if (e && e.code === 'rate_limited') say('err', 'Já existe um pedido de salvamento aberto. Responda a ele e tente de novo.');
+      else say('err', 'Não foi possível salvar o arquivo. Tente de novo.');
+    }
+  }
+  async function run() {
+    if (busy) return;
+    const n = parseInt($('qty').value, 10);
+    if (!(n >= 1 && n <= MAX)) { say('err', `Informe uma quantidade entre 1 e ${MAX}.`); $('qty').focus(); return; }
+    cancel = false; lastZip = null; setBusy(true);
+    const type = state.type, o = opts();
+    try {
+      await fontsP;
+      say('', 'Sorteando cartelas únicas...');
+      await new Promise(r => setTimeout(r, 0));
+      const cards = generateUnique(type, n);
+      const cv = document.createElement('canvas'), zip = makeZip();
+      const pad = Math.max(4, String(n).length);
+      for (let i = 0; i < n; i++) {
+        if (cancel) throw { cancelled: true };
+        drawCard(cv, type, cards[i], o, DPI, i + 1);
+        const blob = await new Promise(r => cv.toBlob(r, 'image/png'));
+        if (!blob) throw new Error('png');
+        const bytes = withDpi(new Uint8Array(await blob.arrayBuffer()));
+        zip.add(`cartela-${type}-${String(i + 1).padStart(pad, '0')}.png`, bytes);
+        progress((i + 1) / n);
+        say('', `Gerando imagens: ${i + 1} de ${n}`);
+        await new Promise(r => setTimeout(r, 0));
+      }
+      lastZip = { blob: zip.finish(), name: `cartelas-bingo-${type}-bolas-${n}un.zip`, count: n };
+      say('', 'Montando o ZIP...');
+      setBusy(false);
+      await save();
+    } catch (e) {
+      setBusy(false);
+      if (e && e.cancelled) say('', 'Geração cancelada.');
+      else say('err', 'Algo deu errado ao gerar as cartelas. Tente de novo com uma quantidade menor ou outra imagem de fundo.');
+    }
+  }
+  $('go').addEventListener('click', run);
+  $('cancel').addEventListener('click', () => { cancel = true; });
+  $('again').addEventListener('click', () => { if (lastZip && !busy) save(); });
+
+  updateMeta(); updateGo(); schedule();
+})();
+</script>
+
+</body></html>
